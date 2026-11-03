@@ -1,6 +1,6 @@
 # Contributing
 
-Issues and pull requests are welcome. Please describe the macOS version, Sushi version and the steps needed to reproduce a problem. Remove credentials, private paths and conversation contents from logs before sharing them.
+Issues and pull requests are welcome. Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), not in public issues. Please describe the macOS version, Sushi version and the steps needed to reproduce a problem. Remove credentials, private paths and conversation contents from logs before sharing them.
 
 For code changes, run the offline checks and build on Apple Silicon:
 

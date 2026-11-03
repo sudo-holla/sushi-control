@@ -17,9 +17,9 @@ struct AboutPanel:View {
             HStack {
                 Link("Sushi on GitHub",destination:URL(string:"https://github.com/beamivalice/sushi")!)
                 Spacer()
-                Link("Documentation",destination:URL(string:"https://github.com/beamivalice/sushi/blob/main/docs/usage.md")!)
+                Link("Documentation",destination:URL(string:"https://github.com/sudo-holla/sushi-control#readme")!)
                 Spacer()
-                Link("Report an Issue",destination:URL(string:"https://github.com/beamivalice/sushi/issues")!)
+                Link("Report an Issue",destination:URL(string:"https://github.com/sudo-holla/sushi-control/issues")!)
             }
             Divider()
             Text("Licenses & acknowledgements").font(.headline)

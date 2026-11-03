@@ -4,18 +4,35 @@ Sushi Control is an independent native macOS companion for [Sushi](https://githu
 
 The app source was extracted from commit `bea8f3faf3c70919b38f696e9f88980e38da5d2e` of the original proposal. The original license and notices are included in this repository.
 
-Native SwiftUI/AppKit menu bar controls for standard Sushi servers. Requires Apple Silicon and macOS 14 or later for the app; the installed Sushi runtime has its own macOS requirements. No Python controller or modified engine is needed.
+Native SwiftUI/AppKit controls for a local Sushi server, with a menu-bar companion, model management and performance charts. The application, inference server and model are separate: this repository contains the app, but not Sushi or any model weights. A standard Sushi server works without a separate controller or modified engine.
 
-Build with Xcode 26 or newer and its command-line tools (the resulting app supports macOS 14 and later):
+## Requirements
+
+- An Apple Silicon Mac running macOS 14 or later. Sushi and individual models have their own requirements.
+- To build from source: Xcode 26 or newer with its command-line tools, Python 3 and Git. Building an app for distribution also uses the macOS `ditto` and `codesign` tools.
+- A separately installed [Sushi](https://github.com/beamivalice/sushi) server and model if you want to run inference. A server is not needed for the default offline tests or to build the app.
+
+## Build and connect
 
 ```sh
+git clone https://github.com/sudo-holla/sushi-control.git
+cd sushi-control
 ./macos/test.sh
 ./macos/build.sh
+open "macos/build/Sushi Control.app"
 ```
 
-If the checkout is in an iCloud-managed folder, build outside it to avoid Finder metadata invalidating signatures: `BUILD_DIR=/private/tmp/sushi-control-build ./macos/build.sh`.
+The build script prints the resulting app path. If the checkout is in an iCloud-managed folder, use a temporary build directory to avoid Finder metadata invalidating signatures:
 
-Open the resulting `Sushi Control.app`. In **Server**, enter the local server root (default `http://127.0.0.1:12345`) and an API key if required, then Save & Connect. Keys stay in memory unless you explicitly save a profile with Remember API key in Keychain enabled. Only local HTTP roots are accepted; redirects are refused. Stock Sushi trusts loopback unless launched with `--api-key-strict`.
+```sh
+BUILD_DIR="${TMPDIR:-/tmp}/sushi-control-build" ./macos/build.sh
+```
+
+In **Server**, enter your running server's local HTTP root and choose **Save & Connect**. The app initially suggests `http://127.0.0.1:12345`; use the actual port configured for your server. Only loopback roots are accepted, with no path such as `/v1`. Supply an API key if your server requires one. Keys stay in memory unless you explicitly save a profile with **Remember API key in Keychain** enabled. Stock Sushi trusts loopback unless launched with `--api-key-strict`.
+
+To create local app and source ZIPs, run `python3 package.py`; the files and checksums are written to `dist/`. The default app build is ad-hoc signed and is not notarized. This repository does not currently provide a prebuilt GitHub release.
+
+For setup and feature details, see [Controls](#controls), [Security and privacy](#security-and-privacy), [Compatibility checks](#compatibility-checks), and [Contributing](CONTRIBUTING.md). Report vulnerabilities using the private process in [SECURITY.md](SECURITY.md).
 
 ## Controls
 
@@ -51,7 +68,7 @@ The runtime and model are not bundled. Builds enable hardened runtime and use ad
 
 Named connection profiles save endpoint and launch settings. Optional API keys are stored in Keychain, separately from profile data. Diagnostics tests server endpoints without loading a model and exports a report with the configured API key redacted.
 
-## Security boundaries
+## Security and privacy
 
 The app links only Apple system frameworks; it does not bundle third-party runtime packages or an inference engine. Keep macOS current for framework security updates. CLI execution uses an explicitly selected executable and argument arrays without a shell; install Sushi from a trusted source. Runtime updates and model downloads are performed by that executable, under your user account.
 
@@ -59,20 +76,25 @@ Inference and controller requests accept loopback HTTP roots only, refuse redire
 
 Connection keys are kept in memory or explicitly saved to this device's unlocked Keychain. Arguments entered in advanced server settings are configuration, not Keychain secrets: inline credentials in those arguments also appear in the launch configuration. Application-created task logs and history use private file permissions; review logs and exports before sharing them. The app is not sandboxed because it manages selected executables, launch agents and model files; it does not request administrator privileges. Developer ID signing and notarization remain separate distribution steps.
 
+Publisher browsing is an explicit feature that sends the entered search terms to Hugging Face and fetches public model metadata. The selected Sushi executable performs model downloads and runtime updates when requested; these operations can contact external services. That executable runs under your user account and normally inherits the app's environment, so use a trusted binary and avoid placing secrets in launch arguments or environment variables unnecessarily. Opening project links uses your browser.
+
+The app stores preferences and connection profiles locally. Benchmark, task and optional usage history live under `~/Library/Application Support/Sushi Control/`; task logs can contain output from the selected executable. Exports and diagnostics can contain local endpoints, model names or filesystem paths even when the configured API key is redacted. Review them before sharing. This repository contains no inference model, user history or app settings. For private vulnerability reports, see [SECURITY.md](SECURITY.md).
+
 ## Compatibility checks
 
 The default checks cover the client, configuration merging, profile reopening, subprocess output, child-process cancellation and deadlines. Pass a Sushi binary to `macos/test.sh` to additionally check stock CLI tasks and a local HTTP download cancellation/resume fixture. The fixture does not load weights or contact Hugging Face. The HTTP integration check starts an installed stock server on temporary loopback ports with an empty model directory, tests discovery, props, rescan, strict authentication, unknown-model refusal and metrics enabled/disabled, then stops only its own processes:
 
 ```sh
+mkdir -p macos/build
 xcrun swiftc -parse-as-library macos/Client.swift macos/IntegrationTests.swift -o macos/build/integration-tests
 python3 run-stock-check.py /absolute/path/to/sushi
 ```
 
-This check does not load weights or prove inference/model lifecycle under load. Test those on a real model before publishing the feature. The upstream CONTRIBUTING.md requires a fresh engine build and passing complete native suite before opening a PR. Keep the PR in draft until repeated client checks and human testing are complete.
+This check does not load weights or prove inference or model lifecycle under load. For changes that affect those paths, test separately with an appropriate model and an isolated server; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Design previews
 
-`BUILD_DIR=/private/tmp/sushi-control-build ./macos/preview.sh` renders the dashboard and menu throughput chart in light and dark appearances. These source-rendered previews cover layout and colours; they are separate from interactive testing of the running application.
+`BUILD_DIR="${TMPDIR:-/tmp}/sushi-control-build" ./macos/preview.sh` renders the dashboard and menu throughput chart in light and dark appearances. These source-rendered previews cover layout and colours; they are separate from interactive testing of the running application.
 
 The native File, Edit and Window menus provide standard macOS editing, close and minimize shortcuts. The fixed native toolbar keeps the sidebar toggle next to the window controls. Control-Command-S also toggles it; the shown/hidden preference is saved, and the detail view can use a narrower window while the sidebar is hidden. Escape dismisses menu-bar controls and returns keyboard focus to an already-visible control centre.
 
@@ -94,7 +116,7 @@ Model Settings can save up to 20 named tuning presets on this Mac. A preset cont
 
 Presets are kept in app preferences, separately from runtime settings. Invalid archives are preserved, and changes in another editor window require reloading before saving. Model support and launch-flag precedence still apply after a preset is selected.
 
-For an optional functional check of a compatible desktop controller, compile `Client.swift` with `ControllerLifecycleTests.swift`. The executable takes the local endpoint, control-token file and result JSON path, plus an optional inference-token file. It unloads and reloads the currently selected model and makes one 16-token request. Run only while the server is idle and you hold the GPU lock. It preserves the model selection and requests restoration after a failure. The default test script compiles this check but does not run it against a live server.
+For an optional functional check of a compatible desktop controller, compile `Client.swift` with `ControllerLifecycleTests.swift`. The executable takes the local endpoint, control-token file and result JSON path, plus an optional inference-token file. It unloads and reloads the currently selected model and makes one 16-token request. Run only against an idle test server, with exclusive access to its model and GPU; coordinate with any other processes using them. It preserves the model selection and requests restoration after a failure. The default test script compiles this check but does not run it against a live server.
 
 ## Local model files
 

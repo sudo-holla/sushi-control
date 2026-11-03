@@ -8,7 +8,7 @@ dist=root/'dist'; dist.mkdir(exist_ok=True)
 app_zip=dist/f'Sushi-Control-{version}-macos-arm64.zip'
 subprocess.run(['/usr/bin/ditto','-c','-k','--keepParent','--norsrc',str(app),str(app_zip)],check=True,timeout=60)
 source_zip=dist/f'Sushi-Control-{version}-source.zip'
-files=[root/name for name in ['.gitignore','README.md','run-stock-check.py','run-download-check.py','run-benchmark-check.py','run-controller-check.py','run-metrics-check.py','package.py']]
+files=[root/name for name in ['.gitignore','README.md','CHANGELOG.md','CONTRIBUTING.md','SECURITY.md','run-stock-check.py','run-download-check.py','run-benchmark-check.py','run-controller-check.py','run-metrics-check.py','package.py']]
 license_root=next(parent for parent in [root,*root.parents] if all((parent/name).is_file() for name in ['LICENSE','LICENSE-APACHE-2.0','NOTICE']))
 files+=sorted((root/'macos').glob('*.swift'))+sorted((root/'macos').glob('*.sh'))
 with zipfile.ZipFile(source_zip,'w',compression=zipfile.ZIP_DEFLATED) as archive:

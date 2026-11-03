@@ -5,3 +5,19 @@ __pycache__/
 .DS_Store
 .swiftpm/
 .build/
+
+# Keep local data, credentials and model weights out of the repository.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.log
+*.gguf
+*.safetensors
+.sushi/
+
+# Local smoke-test output.
+stock-check.json

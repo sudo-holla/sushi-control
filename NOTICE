@@ -1,3 +1,11 @@
+Sushi Control standalone distribution
+=====================================
+
+The full original Sushi project notice is reproduced below to retain upstream
+attribution. It describes Sushi's inference engine and other components that
+are not included in this standalone application; it is not an inventory of
+this app's bundled dependencies.
+
 sushi, a fork of ddalcu's mlx-serve
 Copyright (c) 2026 David Dalcu
 
