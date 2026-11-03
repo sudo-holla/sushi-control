@@ -669,3 +669,14 @@ Dual-licensed under Apache-2.0 OR MPL-2.0; used here under Apache-2.0.
 The minified production bundle is vendored inline in src/webui/index.html
 (with only the source-map comment removed). Full upstream license text:
 src/webui/DOMPurify.LICENSE.
+
+Original upstream license note
+==============================
+The MIT terms above cover sushi's own code, including the code it inherits from
+mlx-serve (https://github.com/ddalcu/mlx-serve). This distribution also includes
+third-party software under its own licenses, including the Apache License 2.0,
+the BSD 3-Clause License, and further MIT-licensed components. Those licenses
+continue to apply to those portions.
+
+See NOTICE for the list and the required attributions, and LICENSE-APACHE-2.0
+for the text of the Apache License, Version 2.0.
