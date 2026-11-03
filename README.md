@@ -6,6 +6,16 @@ The app source was extracted from commit `bea8f3faf3c70919b38f696e9f88980e38da5d
 
 Native SwiftUI/AppKit controls for a local Sushi server, with a menu-bar companion, model management and performance charts. The application, inference server and model are separate: this repository contains the app, but not Sushi or any model weights. A standard Sushi server works without a separate controller or modified engine.
 
+## Screenshots
+
+These views use an example model and simulated performance data.
+
+![Status dashboard showing an example model and live performance charts](docs/screenshots/status.jpg)
+
+| Model library | Client integrations |
+| --- | --- |
+| ![Model library with an example model](docs/screenshots/models.jpg) | ![Client integration settings with example local endpoints](docs/screenshots/integrations.jpg) |
+
 ## Requirements
 
 - An Apple Silicon Mac running macOS 14 or later. Sushi and individual models have their own requirements.

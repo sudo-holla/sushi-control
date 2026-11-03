@@ -11,6 +11,7 @@ source_zip=dist/f'Sushi-Control-{version}-source.zip'
 files=[root/name for name in ['.gitignore','README.md','CHANGELOG.md','CONTRIBUTING.md','SECURITY.md','run-stock-check.py','run-download-check.py','run-benchmark-check.py','run-controller-check.py','run-metrics-check.py','package.py']]
 license_root=next(parent for parent in [root,*root.parents] if all((parent/name).is_file() for name in ['LICENSE','LICENSE-APACHE-2.0','NOTICE']))
 files+=sorted((root/'macos').glob('*.swift'))+sorted((root/'macos').glob('*.sh'))
+files+=sorted((root/'docs'/'screenshots').glob('*.jpg'))
 with zipfile.ZipFile(source_zip,'w',compression=zipfile.ZIP_DEFLATED) as archive:
  for path in files: archive.write(path,f'Sushi-Control-{version}/'+str(path.relative_to(root)))
  for name in ['LICENSE','LICENSE-APACHE-2.0','NOTICE']: archive.write(license_root/name,f'Sushi-Control-{version}/'+name)
