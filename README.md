@@ -1,10 +1,8 @@
 # Sushi Control for macOS
 
-Sushi Control is an independent native macOS companion for [Sushi](https://github.com/beamivalice/sushi). This standalone repository continues the app originally proposed in [Sushi PR #64](https://github.com/beamivalice/sushi/pull/64). It is maintained independently and is not an official Sushi release.
+Sushi Control is a native macOS companion for [Sushi](https://github.com/beamivalice/sushi) that monitors and controls your local inference server. It provides a menu-bar companion, model management, performance charts and client integrations.
 
-The app source was extracted from commit `bea8f3faf3c70919b38f696e9f88980e38da5d2e` of the original proposal. The original license and notices are included in this repository.
-
-Native SwiftUI/AppKit controls for a local Sushi server, with a menu-bar companion, model management and performance charts. The application, inference server and model are separate: this repository contains the app, but not Sushi or any model weights. A standard Sushi server works without a separate controller or modified engine.
+Sushi and model weights are installed separately. The app works with a standard Sushi server without a separate controller or modified engine.
 
 ## Screenshots
 

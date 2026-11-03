@@ -6,7 +6,7 @@ Please report suspected vulnerabilities privately using **Report a vulnerability
 
 Include the affected Sushi Control version or commit, macOS version, relevant Sushi version, reproduction steps and potential impact. Use test data and redact credentials and identifying paths. We will review reports on a best-effort basis and coordinate any disclosure through the private report.
 
-This repository is an independent macOS client. Report vulnerabilities in the Sushi inference engine itself to its maintainers through the appropriate [upstream security process](https://github.com/beamivalice/sushi/security).
+Sushi Control is a macOS companion for Sushi. Report vulnerabilities in the Sushi inference engine itself to its maintainers through the appropriate [upstream security process](https://github.com/beamivalice/sushi/security).
 
 ## Supported code
 
