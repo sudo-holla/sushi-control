@@ -6,7 +6,7 @@ The app source was extracted from commit `bea8f3faf3c70919b38f696e9f88980e38da5d
 
 Native SwiftUI/AppKit menu bar controls for standard Sushi servers. Requires Apple Silicon and macOS 14 or later for the app; the installed Sushi runtime has its own macOS requirements. No Python controller or modified engine is needed.
 
-Build with the installed Xcode command-line tools:
+Build with Xcode 26 or newer and its command-line tools (the resulting app supports macOS 14 and later):
 
 ```sh
 ./macos/test.sh
