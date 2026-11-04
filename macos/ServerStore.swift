@@ -61,16 +61,37 @@ import AppKit
     @Published var controllerToken = "" { didSet { controllerState = nil; controllerError = "" } }
     @Published var controllerState:DesktopControllerState?
     @Published var controllerError = ""
+    @Published private(set) var controllerRemembered = false
+    private func readControllerToken(_ url:URL) throws -> String {
+        let values = try url.resourceValues(forKeys:[.fileSizeKey,.isRegularFileKey])
+        guard values.isRegularFile == true, let size = values.fileSize, size > 0, size <= 4096 else { throw ServerFailure(message:"Choose a token file smaller than 4 KiB.") }
+        let token = try String(contentsOf:url,encoding:.utf8).trimmingCharacters(in:.whitespacesAndNewlines)
+        guard !token.isEmpty, !token.contains(where:{$0.isWhitespace || $0.isNewline}) else { throw ServerFailure(message:"The controller token must be a single nonempty value.") }
+        return token
+    }
+    func connectControllerToken(_ url:URL) throws {
+        _ = try connection.request("control/status")
+        let token = try readControllerToken(url)
+        defaults.set(["endpoint":connectedEndpoint,"path":url.standardizedFileURL.path],forKey:"desktopControllerFile")
+        controllerRemembered = true; controllerToken = token
+    }
+    func disconnectController() {
+        defaults.removeObject(forKey:"desktopControllerFile")
+        controllerRemembered = false; controllerToken = ""
+    }
+    private func restoreController() {
+        guard let saved = defaults.dictionary(forKey:"desktopControllerFile"),
+              let savedEndpoint = saved["endpoint"] as? String, savedEndpoint == connectedEndpoint,
+              let path = saved["path"] as? String, path.hasPrefix("/") else { return }
+        controllerRemembered = true
+        do { controllerToken = try readControllerToken(URL(fileURLWithPath:path)) }
+        catch { controllerError = "Could not read the saved control token. Choose it again or disconnect the controller." }
+    }
     func chooseControllerToken() {
         let panel = NSOpenPanel(); panel.canChooseDirectories = false; panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            let values = try url.resourceValues(forKeys:[.fileSizeKey,.isRegularFileKey])
-            guard values.isRegularFile == true, (values.fileSize ?? 0) <= 4096 else { throw ServerFailure(message:"Choose a token file smaller than 4 KiB.") }
-            let token = try String(contentsOf:url,encoding:.utf8).trimmingCharacters(in:.whitespacesAndNewlines)
-            guard !token.isEmpty, !token.contains(where:{$0.isWhitespace || $0.isNewline}) else { throw ServerFailure(message:"The controller token must be a single nonempty value.") }
-            controllerToken = token; refreshNow()
-        } catch { controllerError = error.localizedDescription }
+        do { try connectControllerToken(url); refreshNow() }
+        catch { controllerError = error.localizedDescription }
     }
     func controllerAction(_ action:String) {
         guard controllerState != nil, !controllerToken.isEmpty, !busy, !tool.exclusiveServerUse,
@@ -218,6 +239,7 @@ import AppKit
             apiKey = profile.rememberKey ? CredentialStore().read(profile.id) ?? "" : ""
             connection = Connection(endpoint:endpoint,apiKey:apiKey)
         }
+        restoreController()
         let configured = defaults.object(forKey:"serverEndpoint") != nil || !profiles.isEmpty || !binary.isEmpty || usesExistingAgent
         setupPresented = !defaults.bool(forKey:"setupCompleted") && !configured
         if automaticallyRefresh {
@@ -286,7 +308,8 @@ import AppKit
         if let saved = profiles.first(where:{$0.id == profileID}), saved.endpoint != endpoint || saved.binary != binary || saved.arguments != arguments {
             defaults.removeObject(forKey:"selectedProfile")
         }
-        generation += 1; connection = updated; history.reset(); prefillHistory.reset(); usage.resetSampling(); rescanAvailable = true; controllerToken = ""
+        if connectedEndpoint != updated.endpoint { disconnectController() }
+        generation += 1; connection = updated; history.reset(); prefillHistory.reset(); usage.resetSampling(); rescanAvailable = true
         defaults.set(endpoint,forKey:"serverEndpoint")
         defaults.set(binary,forKey:"serverBinary")
         defaults.set(arguments,forKey:"serverArguments")
@@ -391,13 +414,13 @@ import AppKit
     }
     func canModelAction(_ path:String,model:String? = nil) -> Bool {
         guard online, !busy, !tool.exclusiveServerUse,
-              controllerToken.isEmpty || controllerState != nil,
+              (!controllerRemembered && controllerToken.isEmpty) || controllerState != nil,
               path != "models/rescan" || rescanAvailable else { return false }
         return (try? ModelActionPlan.make(path,model:model,controller:controllerState)) != nil
     }
     func modelAction(_ path:String, model:String? = nil) {
         guard !busy && !tool.exclusiveServerUse else { return }
-        if !controllerToken.isEmpty && controllerState == nil { error = "Reconnect the desktop controller before changing models, or disconnect it to use the standard Sushi API."; return }
+        if (controllerRemembered || !controllerToken.isEmpty) && controllerState == nil { error = "Reconnect the desktop controller before changing models, or disconnect it to use the standard Sushi API."; return }
         let plan:ModelActionPlan
         do { plan = try ModelActionPlan.make(path,model:model,controller:controllerState) }
         catch { self.error = error.localizedDescription; return }

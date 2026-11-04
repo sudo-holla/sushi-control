@@ -708,9 +708,9 @@ struct DesktopControllerPanel:View {
                 Text("Connect a compatible local controller to pause new requests or load and unload its model. Standard Sushi servers do not require this extension.").font(.caption).foregroundStyle(.secondary)
                 HStack {
                     Button("Choose Control Token…") { store.chooseControllerToken() }
-                    if !store.controllerToken.isEmpty { Button("Disconnect") { store.controllerToken = "" } }
+                    if store.controllerRemembered || !store.controllerToken.isEmpty { Button("Disconnect") { store.disconnectController() } }
                 }.disabled(store.busy)
-                Text("The control token stays in memory until you disconnect, change servers, or quit. It is separate from the inference API key.").font(.caption).foregroundStyle(.secondary)
+                Text("The selected token file is remembered for this server and read on launch. The token is not stored in app preferences. Disconnect to forget it.").font(.caption).foregroundStyle(.secondary)
                 if let state = store.controllerState {
                     LabeledContent("Controller",value:state.state.capitalized)
                     LabeledContent("Active requests",value:String(state.activeRequests))

@@ -108,7 +108,7 @@ The native File, Edit and Window menus provide standard macOS editing, close and
 
 ## Optional desktop controller
 
-Server → Connection can attach to a compatible controller’s authenticated `/control/status` and `/control/action` endpoints. Choose its control-token file explicitly. This token is separate from the inference API key and remains in memory only; changing connections or quitting clears it. Standard Sushi servers need no token or companion controller.
+Server → Connection can attach to a compatible controller’s authenticated `/control/status` and `/control/action` endpoints. Choose its control-token file explicitly. The app remembers the selected file for the current server and reads the token on launch. The token itself is not stored in app preferences. Disconnecting or changing servers forgets the file. Standard Sushi servers need no token or companion controller.
 
 Once a valid controller response is received, the panel offers pause/resume for new requests and load/unload for its current model. Existing requests can finish when admission is paused. Busy or unsupported actions report the controller’s refusal; loading does not automatically resume paused admission. While connected, library and menu model actions use the controller catalog and control API. Switching models saves the controller selection before loading; a later load failure explicitly reports that the new model remains selected. Rescanning is disabled because the controller refreshes its catalog automatically. Disconnecting restores the standard Sushi API. Pause/resume is also available in the menu bar, and paused admission appears in the status badge.
 
