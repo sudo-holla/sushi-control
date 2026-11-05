@@ -70,6 +70,17 @@ import Darwin
         precondition(controllerStore.controllerState == nil)
         precondition(!controllerStore.canModelAction("load-model",model:"current"))
         precondition(ServerStore(defaults:setupDefaults,automaticallyRefresh:false).controllerToken.isEmpty)
+        controllerStore.controllerState = try DesktopControllerState(["model":"current","desktop":["paused":false,"models":[]],"idle_controller":["state":"ready","active_requests":0]])
+        precondition(controllerStore.canControllerAction("pause") && !controllerStore.canControllerAction("resume"))
+        precondition(controllerStore.canControllerAction("unload") && !controllerStore.canControllerAction("load"))
+        controllerStore.controllerState = try DesktopControllerState(["model":"current","desktop":["paused":true,"models":[]],"idle_controller":["state":"sleeping","active_requests":0]])
+        precondition(controllerStore.canControllerAction("resume") && !controllerStore.canControllerAction("pause"))
+        precondition(controllerStore.canControllerAction("load") && !controllerStore.canControllerAction("unload"))
+        controllerStore.controllerState = try DesktopControllerState(["model":"current","desktop":["paused":false,"models":[]],"idle_controller":["state":"ready","active_requests":1]])
+        precondition(controllerStore.canControllerAction("pause") && !controllerStore.canControllerAction("unload"))
+        controllerStore.busy = true; precondition(!controllerStore.canControllerAction("pause")); controllerStore.busy = false
+        controllerStore.online = false; precondition(!controllerStore.canControllerAction("pause")); controllerStore.online = true
+        precondition(!controllerStore.canControllerAction("unknown"))
         let tokenDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at:tokenDir,withIntermediateDirectories:true)
         defer { try? FileManager.default.removeItem(at:tokenDir) }

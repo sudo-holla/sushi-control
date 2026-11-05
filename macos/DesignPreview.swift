@@ -9,6 +9,8 @@ import SwiftUI
         for connected in [false,true] {
         store.online = connected
         if connected {
+            store.controllerToken = "preview"
+            store.controllerState = try DesktopControllerState(["model":"Example model","desktop":["paused":false,"models":[]],"idle_controller":["state":"ready","active_requests":1]])
             store.models = [ModelEntry(id:"Example model",loaded:true,state:"ready",architecture:"",quantization:"4-bit",contextTokens:131072,residentBytes:32*1073741824)]
             store.selected = "Example model"
             store.props = ["memory":["active_bytes":36.0*1073741824],"settings":["prefix_cache":["ram_enabled":true,"mem_bytes":8.0*1073741824,"disk_bytes":20.0*1073741824,"disk_used_bytes":6.0*1073741824,"disk_entries":24]]]

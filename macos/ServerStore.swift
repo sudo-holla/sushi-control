@@ -93,9 +93,18 @@ import AppKit
         do { try connectControllerToken(url); refreshNow() }
         catch { controllerError = error.localizedDescription }
     }
+    func canControllerAction(_ action:String) -> Bool {
+        guard online, let state = controllerState, !controllerToken.isEmpty, !busy, !tool.exclusiveServerUse else { return false }
+        switch action {
+        case "pause": return !state.paused
+        case "resume": return state.paused
+        case "load": return state.state == "sleeping" && state.activeRequests == 0
+        case "unload": return state.state == "ready" && state.activeRequests == 0
+        default: return false
+        }
+    }
     func controllerAction(_ action:String) {
-        guard controllerState != nil, !controllerToken.isEmpty, !busy, !tool.exclusiveServerUse,
-              ["pause","resume","load","unload"].contains(action) else { return }
+        guard canControllerAction(action) else { return }
         generation += 1; busy = true; operation = "Updating controller…"
         let client = Connection(endpoint:connectedEndpoint,apiKey:controllerToken)
         Task {

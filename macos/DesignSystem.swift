@@ -155,6 +155,10 @@ struct ServerHero:View {
                 Spacer()
                 if store.online { Button("Dashboard",systemImage:"arrow.up.right.square") { store.dashboard() } }
             }
+            if store.controllerState != nil {
+                ControllerQuickActions(store:store)
+                if !store.controllerError.isEmpty { Text(store.controllerError).font(.caption).foregroundStyle(.red).textSelection(.enabled) }
+            }
         }.padding(18).frame(maxWidth:.infinity,alignment:.leading).modifier(SushiControlSurface())
     }
 }

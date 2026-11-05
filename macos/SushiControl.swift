@@ -27,6 +27,23 @@ struct Actions:View {
         } message: { Text("This ends any active requests for the selected server.") }
     }
 }
+struct ControllerQuickActions:View {
+    @ObservedObject var store:ServerStore
+    var body:some View {
+        if let controller = store.controllerState {
+            HStack {
+                let admission = controller.paused ? "resume" : "pause"
+                Button(controller.paused ? "Resume Requests" : "Pause New Requests",systemImage:controller.paused ? "play.circle" : "pause.circle") { store.controllerAction(admission) }
+                    .disabled(!store.canControllerAction(admission))
+                    .help(controller.paused ? "Allow new requests again." : "Prevent new requests from waking or using the model; existing requests can finish.")
+                let modelAction = controller.state == "sleeping" ? "load" : "unload"
+                Button(modelAction == "load" ? "Load Model" : "Unload Model",systemImage:modelAction == "load" ? "arrow.down.circle" : "eject") { store.controllerAction(modelAction) }
+                    .disabled(!store.canControllerAction(modelAction))
+                    .help(modelAction == "load" ? "Load the controller's current model." : "Unload the current model when no requests are active.")
+            }
+        }
+    }
+}
 struct ConnectionBadge:View {
     @ObservedObject var store:ServerStore
     var body:some View {
@@ -179,10 +196,10 @@ struct MenuPanel:View {
                 Text(store.connectedEndpoint).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle).help(store.connectedEndpoint)
                 if let controller = store.controllerState {
                     Divider()
-                    Button(controller.paused ? "Resume Requests" : "Pause New Requests",systemImage:controller.paused ? "play.circle" : "pause.circle") { store.controllerAction(controller.paused ? "resume" : "pause") }
-                        .disabled(store.busy || store.tool.exclusiveServerUse)
+                    ControllerQuickActions(store:store).buttonStyle(.bordered)
                     if controller.paused { Text("New requests paused; existing work can finish.").font(.caption).foregroundStyle(.secondary) }
                 }
+                if !store.controllerError.isEmpty { Text(store.controllerError).font(.caption).foregroundStyle(.red).textSelection(.enabled) }
                 if store.owned || (!store.online && store.canStart) {
                     Divider()
                     Actions(store:store,compact:true).buttonStyle(.bordered)
@@ -715,9 +732,9 @@ struct DesktopControllerPanel:View {
                     LabeledContent("Controller",value:state.state.capitalized)
                     LabeledContent("Active requests",value:String(state.activeRequests))
                     HStack {
-                        Button(state.paused ? "Resume Requests" : "Pause New Requests") { store.controllerAction(state.paused ? "resume" : "pause") }
-                        Button("Load Model") { store.controllerAction("load") }.disabled(state.state != "sleeping")
-                        Button("Unload Model") { store.controllerAction("unload") }.disabled(state.activeRequests > 0 || state.state != "ready")
+                        Button(state.paused ? "Resume Requests" : "Pause New Requests") { store.controllerAction(state.paused ? "resume" : "pause") }.disabled(!store.canControllerAction(state.paused ? "resume" : "pause"))
+                        Button("Load Model") { store.controllerAction("load") }.disabled(!store.canControllerAction("load"))
+                        Button("Unload Model") { store.controllerAction("unload") }.disabled(!store.canControllerAction("unload"))
                     }.disabled(store.busy || store.tool.exclusiveServerUse)
                     Text(state.paused ? "New requests are paused. Existing requests can finish." : "New requests are accepted. Unloading keeps the controller available for the next load.").font(.caption).foregroundStyle(.secondary)
                 }
