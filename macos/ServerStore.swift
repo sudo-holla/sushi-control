@@ -123,6 +123,7 @@ import AppKit
     @Published var lastUpdated:Date?
     @Published var history = ThroughputHistory()
     @Published var prefillHistory = PrefillHistory()
+    @Published var temperatureHistory = TemperatureHistory()
     @Published var logText = ""
     @Published var logError = ""
     @Published var logStream = "output"
@@ -138,10 +139,10 @@ import AppKit
     }
     @Published var sidebarVisible = true { didSet { defaults.set(sidebarVisible,forKey:"sidebarVisible") } }
     @Published var appearance = "system"
-    static let menuMetricOptions = ["GPU","Output","Requests","Cache reuse"]
+    static let menuMetricOptions = ["GPU","Output","Requests","Cache reuse","GPU temp"]
     @Published var menuBarMetric = "None" {
         didSet {
-            guard ["None","Requests","Output","GPU"].contains(menuBarMetric) else { menuBarMetric = oldValue; return }
+            guard ["None","Requests","Output","GPU","GPU temp"].contains(menuBarMetric) else { menuBarMetric = oldValue; return }
             defaults.set(menuBarMetric,forKey:"menuBarMetric")
         }
     }
@@ -160,8 +161,10 @@ import AppKit
     }
     func menuValue(_ name:String) -> String {
         guard online && !backendSleeping else { return "—" }
-        switch name { case "GPU":return memory; case "Output":return outputRate; case "Requests":return activity; case "Cache reuse":return cacheReuse; default:return "—" }
+        switch name { case "GPU":return memory; case "Output":return outputRate; case "Requests":return activity; case "Cache reuse":return cacheReuse; case "GPU temp":return gpuTempText; default:return "—" }
     }
+    var gpuTempText:String { system.gpuTempC.map { String(format:"%.0f °C",$0) } ?? "—" }
+    var cpuTempText:String { system.cpuTempC.map { String(format:"%.0f °C",$0) } ?? "—" }
     func toggleMenuMetric(_ name:String) {
         guard Self.menuMetricOptions.contains(name) else { return }
         if menuMetricNames.contains(name) { menuMetricNames.removeAll { $0 == name } } else { menuMetricNames.append(name) }
@@ -244,7 +247,7 @@ import AppKit
         let interval = defaults.double(forKey:"refreshInterval")
         refreshInterval = [2.0,3,5,10].contains(interval) ? interval : 3
         showDockIcon = defaults.bool(forKey:"showDockIcon")
-        menuBarMetric = defaults.string(forKey:"menuBarMetric").flatMap { ["None","Requests","Output","GPU"].contains($0) ? $0 : nil } ?? (defaults.bool(forKey:"showActivity") ? "Requests" : "None")
+        menuBarMetric = defaults.string(forKey:"menuBarMetric").flatMap { ["None","Requests","Output","GPU","GPU temp"].contains($0) ? $0 : nil } ?? (defaults.bool(forKey:"showActivity") ? "Requests" : "None")
         menuShowGraph = defaults.object(forKey:"menuShowGraph") as? Bool ?? true
         if let metrics = defaults.stringArray(forKey:"menuMetricNames"), metrics.allSatisfy(Self.menuMetricOptions.contains), Set(metrics).count == metrics.count { menuMetricNames = metrics }
         favoriteModelIDs = Set(defaults.stringArray(forKey:"favoriteModels") ?? [])
@@ -341,10 +344,12 @@ import AppKit
     func refreshNow() {
         guard !checking else { return }
         checking = true
+        systemMonitor.beginTemperatureDiscovery()
         Task { await refresh(); checking = false }
     }
     func refresh() async {
         system = systemMonitor.sample()
+        temperatureHistory.record(time:Date(),gpuC:system.gpuTempC,cpuC:system.cpuTempC)
         guard !busy else { return }
         guard !refreshing else { refreshPending = true; return }
         refreshing = true

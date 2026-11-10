@@ -481,7 +481,7 @@ struct ControlCenter:View {
                 SushiCard("Menu bar") {
                     VStack(alignment:.leading,spacing:0) {
                         PreferenceRow("Menu bar display",detail:"Choose what appears beside the sushi icon.",icon:"menubar.rectangle") {
-                            Picker("Menu bar display",selection:$store.menuBarMetric) { Text("Icon only").tag("None"); Text("Active requests").tag("Requests"); Text("Output speed").tag("Output"); Text("GPU allocation").tag("GPU") }.labelsHidden().frame(width:170)
+                            Picker("Menu bar display",selection:$store.menuBarMetric) { Text("Icon only").tag("None"); Text("Active requests").tag("Requests"); Text("Output speed").tag("Output"); Text("GPU allocation").tag("GPU"); Text("GPU temperature").tag("GPU temp") }.labelsHidden().frame(width:170)
                         }
                         Divider()
                         PreferenceRow("Live throughput graph",detail:"Show output and prefill in the menu panel.",icon:"waveform.path") {

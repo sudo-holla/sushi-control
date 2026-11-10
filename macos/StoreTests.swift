@@ -191,9 +191,19 @@ import Darwin
         menuValues.metricsTemporarilyUnavailable = false
         menuValues.menuBarMetric = "Requests"; precondition(menuValues.menuBarText == " 2")
         menuValues.menuBarMetric = "GPU"; precondition(menuValues.menuBarText == " 3.0 GiB")
-        menuValues.backendSleeping = true; precondition(menuValues.menuBarText.isEmpty && menuValues.menuValue("GPU") == "—")
+        precondition(ServerStore.menuOptionalMetricOptions.contains("GPU temp"))
+        menuValues.system.gpuTempC = 61.4; menuValues.system.cpuTempC = 78.6
+        precondition(menuValues.gpuTempText == "61 °C" && menuValues.cpuTempText == "79 °C")
+        menuValues.menuBarMetric = "GPU temp"; precondition(menuValues.menuBarText == " 61 °C")
+        menuValues.toggleMenuMetric("GPU temp"); precondition(menuValues.menuSecondaryMetrics.contains("GPU temp"))
+        menuValues.toggleMenuMetric("GPU temp"); precondition(!menuValues.menuMetricNames.contains("GPU temp"))  // restore state for the assertions below
+        menuValues.backendSleeping = true; precondition(menuValues.menuBarText.isEmpty && menuValues.menuValue("GPU") == "—" && menuValues.menuValue("GPU temp") == "—")
         menuValues.toggleMenuMetric("Output"); precondition(!menuValues.menuMetricNames.contains("Output"))
         menuValues.menuMetricNames = ["invalid"]; precondition(menuValues.menuMetricNames == ["GPU"])
+        // The temperature metric survives a reopen and rejects unknown names.
+        store.menuBarMetric = "GPU temp"
+        precondition(ServerStore(defaults:defaults,automaticallyRefresh:false).menuBarMetric == "GPU temp")
+        store.menuBarMetric = "Requests"
         store.refreshInterval = 2; store.showDockIcon = true
         store.refreshInterval = .infinity
         precondition(store.refreshInterval == 2)

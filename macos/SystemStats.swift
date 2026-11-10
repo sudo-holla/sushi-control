@@ -12,6 +12,8 @@ struct SystemSnapshot {
     var gpuCoreCount:Int?
     var gpuUsagePercent:Double?
     var cpuUsagePercent:Double?
+    var gpuTempC:Double?
+    var cpuTempC:Double?
     var cpuTicks:[UInt32]?
     var uptime = ProcessInfo.processInfo.systemUptime
     var thermal = "Unknown"
@@ -89,11 +91,16 @@ struct SystemMonitor {
     private var previousTicks:[UInt32]?
     private var sampledAt:TimeInterval?
     private var latest = SystemSnapshot.capture()
+    private let temperatures = SOCTemperatureReader()
+    /// Sensor keys are enumerated once, off the main thread; temperatures stay nil until that finishes.
+    func beginTemperatureDiscovery() { temperatures.beginDiscovery() }
     mutating func sample() -> SystemSnapshot {
         let now = ProcessInfo.processInfo.systemUptime
         if let sampledAt, now-sampledAt < 0.5 { return latest }
         var snapshot = SystemSnapshot.capture()
         snapshot.cpuUsagePercent = SystemSnapshot.cpuPercent(previous:previousTicks,current:snapshot.cpuTicks ?? [])
+        let readings = temperatures.sample()
+        snapshot.gpuTempC = readings.gpuC; snapshot.cpuTempC = readings.cpuC
         previousTicks = snapshot.cpuTicks; sampledAt = now; latest = snapshot
         return snapshot
     }

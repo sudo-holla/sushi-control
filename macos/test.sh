@@ -7,7 +7,7 @@ xcrun swiftc -parse-as-library Client.swift LaunchConfiguration.swift Connection
 "$output/client-tests"
 xcrun swiftc -parse-as-library Client.swift ToolTask.swift ToolTaskTests.swift -o "$output/tool-tests"
 if [ "$#" -gt 0 ]; then "$output/tool-tests" "$1"; else "$output/tool-tests"; fi
-xcrun swiftc -parse-as-library -D DESIGN_PREVIEW Client.swift ServerStore.swift SystemStats.swift LaunchConfiguration.swift DesignSystem.swift ToolTask.swift ToolsPanel.swift ConnectionProfile.swift ManagedServer.swift SushiIcon.swift PerformancePanel.swift IntegrationsPanel.swift ModelSettings.swift ModelSettingsPanel.swift AboutPanel.swift Benchmark.swift BenchmarkPanel.swift SetupGuide.swift Conversion.swift ConversionPanel.swift TaskActivityPanel.swift UsageHistory.swift UsageHistoryPanel.swift LocalModelFiles.swift LocalModelFilesPanel.swift HubModels.swift HubBrowserPanel.swift SushiControl.swift StoreTests.swift -o "$output/store-tests" -framework SwiftUI -framework AppKit -framework ServiceManagement -framework Security
+xcrun swiftc -parse-as-library -D DESIGN_PREVIEW Client.swift ServerStore.swift SystemStats.swift Sensors.swift LaunchConfiguration.swift DesignSystem.swift ToolTask.swift ToolsPanel.swift ConnectionProfile.swift ManagedServer.swift SushiIcon.swift PerformancePanel.swift IntegrationsPanel.swift ModelSettings.swift ModelSettingsPanel.swift AboutPanel.swift Benchmark.swift BenchmarkPanel.swift SetupGuide.swift Conversion.swift ConversionPanel.swift TaskActivityPanel.swift UsageHistory.swift UsageHistoryPanel.swift LocalModelFiles.swift LocalModelFilesPanel.swift HubModels.swift HubBrowserPanel.swift SushiControl.swift StoreTests.swift -o "$output/store-tests" -framework SwiftUI -framework AppKit -framework ServiceManagement -framework Security
 if [ "$#" -gt 0 ]; then
     test_port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
     "$output/store-tests" "$1" "$test_port"
@@ -38,6 +38,9 @@ python3 ../run-controller-check.py "$output/controller-http-tests"
 
 xcrun swiftc -parse-as-library Client.swift UsageHistory.swift UsageHistoryTests.swift -o "$output/usage-tests"
 "$output/usage-tests"
+
+xcrun swiftc -parse-as-library Client.swift SystemStats.swift Sensors.swift SensorsTests.swift -o "$output/sensor-tests"
+"$output/sensor-tests"
 
 xcrun swiftc -parse-as-library Client.swift ControllerLifecycleTests.swift -o "$output/controller-lifecycle-tests"
 

@@ -678,6 +678,25 @@ The minified production bundle is vendored inline in src/webui/index.html
 (with only the source-map comment removed). Full upstream license text:
 src/webui/DOMPurify.LICENSE.
 
+================================================================================
+swift-soc-metrics
+https://github.com/GoodOlClint/swift-soc-metrics
+Copyright (c) swift-soc-metrics contributors
+Licensed under the MIT License.
+
+Used in this application (`macos/Sensors.swift`): the AppleSMC user-client
+request/response layout (`SMCKeyData_t` field offsets and the
+`kSMCHandleYPCEvent` / `kSMCReadKey` / `kSMCGetKeyInfo` / `kSMCGetKeyFromIndex`
+selectors) and the `flt `-typed `Tg*`/`Tp*`/`Te*` sensor-key discovery, ported
+from that project's `Sources/CIOReport/CIOReport.h` and `SMCReader.swift`.
+Modifications: the struct is addressed by explicit byte offsets because Swift
+struct padding does not reproduce the C layout the driver expects; discovery
+caches sensor keys off the main thread and is enumerated once per process;
+readings are reduced to the hottest sensor per group and filtered to a sane
+temperature band; every failure degrades to an unavailable reading. Its ADR
+0001 (why IOReport exposes no usable die temperature on M4/M5) informed the
+choice of SMC over IOReport. No IOReport code is used.
+
 Original upstream license note
 ==============================
 The MIT terms above cover sushi's own code, including the code it inherits from

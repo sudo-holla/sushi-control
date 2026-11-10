@@ -6,6 +6,7 @@
 
 - Serving statistics can be reset from the dashboard. `Reset stats` starts an app-local window covering totals, request outcomes, cache efficiency, completed-request speeds, mean time to first token and the two trend charts; the snapshot survives app restarts and `Show server totals` returns to the lifetime view. Standard Sushi exposes no statistics-reset endpoint, so the reset is local to the app: when the server restarts and counters move backwards, the stale window is retired and lifetime totals are shown again.
 - Saved usage accepts a custom start/end date range in addition to Today, 7 days and 30 days. The date pickers are clamped to the 30 days retained locally, and the panel labels the range that was actually queried.
+- GPU and CPU die temperature monitoring, read from the Apple System Management Controller without administrator rights. The dashboard shows a GPU temperature card and a GPU/CPU trend chart next to output, prefill and GPU allocation; Status shows the hottest sensor of each group beside utilization and thermal state; and GPU temperature can be selected as a menu-bar metric or title. Each group is reduced to its hottest sensor, the reading that drives fan speed and clock throttling. Machines that expose no readable sensor show a dash.
 
 ## 0.1.0 — 2026-11-05
 

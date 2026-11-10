@@ -202,7 +202,7 @@ struct StatusDashboard:View {
                             Text("The inference engine is sleeping. Live performance returns when it wakes; model management remains available.").font(.callout).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
                         }
                     } else {
-                    HStack(spacing:12) { MetricCard(title:"Output",value:store.outputRate,detail:"Server-wide generation",icon:"waveform.path"); MetricCard(title:"Prefill",value:store.prefillRate,detail:"Uncached prompt work",icon:"text.alignleft"); MetricCard(title:"GPU allocation",value:store.memory,detail:"In use by Sushi",icon:"memorychip") }
+                    HStack(spacing:12) { MetricCard(title:"Output",value:store.outputRate,detail:"Server-wide generation",icon:"waveform.path"); MetricCard(title:"Prefill",value:store.prefillRate,detail:"Uncached prompt work",icon:"text.alignleft"); MetricCard(title:"GPU allocation",value:store.memory,detail:"In use by Sushi",icon:"memorychip"); MetricCard(title:"GPU temperature",value:store.gpuTempText,detail:"Hottest GPU sensor · CPU "+store.cpuTempText,icon:"thermometer.medium") }
                     PerformancePanel(store:store)
                     ServingStatsPanel(store:store)
                     PrefixCachePanel(props:store.props)

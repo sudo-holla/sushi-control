@@ -65,6 +65,57 @@ struct MetricTimeline:View {
     }
 }
 
+struct TemperatureTimeline:View {
+    var samples:[TemperatureSample]
+    var domain:ClosedRange<Date>
+    var maximumGap:TimeInterval
+    var unavailable:Bool
+    var body:some View {
+        let gpu = TimelineValue.points(samples.filter { domain.contains($0.time) },value:{$0.gpuC},maximumGap:maximumGap)
+        let cpu = TimelineValue.points(samples.filter { domain.contains($0.time) },value:{$0.cpuC},maximumGap:maximumGap)
+        let peak = max(gpu.map(\.value).max() ?? 0,cpu.map(\.value).max() ?? 0)
+        let gpuLine = StrokeStyle(lineWidth:2)
+        let cpuLine = StrokeStyle(lineWidth:2,dash:[4,3])
+        VStack(alignment:.leading,spacing:6) {
+            HStack {
+                HStack(spacing:12) {
+                    Label("GPU",systemImage:"minus").foregroundStyle(Color.sushiAccent)
+                    Label("CPU",systemImage:"line.horizontal.3").foregroundStyle(Color.indigo)
+                }.font(.caption.weight(.medium))
+                Spacer()
+                Text("°C").font(.caption).foregroundStyle(.secondary)
+            }
+            if samples.isEmpty {
+                Text(unavailable ? "Die temperature is not reported by this Mac." : "Collecting temperature samples…").font(.caption).foregroundStyle(.secondary).frame(maxWidth:.infinity,minHeight:84,alignment:.leading)
+            } else {
+                Chart {
+                    ForEach(gpu) { point in
+                        let value = point.value
+                        let key = "gpu-\(point.segment)"
+                        LineMark(x:.value("Time",point.time),y:.value("°C",value),series:.value("Series",key))
+                            .foregroundStyle(Color.sushiAccent)
+                            .lineStyle(gpuLine)
+                        if gpu.count == 1 { PointMark(x:.value("Time",point.time),y:.value("°C",value)).foregroundStyle(Color.sushiAccent).symbolSize(18) }
+                    }
+                    ForEach(cpu) { point in
+                        let value = point.value
+                        let key = "cpu-\(point.segment)"
+                        LineMark(x:.value("Time",point.time),y:.value("°C",value),series:.value("Series",key))
+                            .foregroundStyle(Color.indigo)
+                            .lineStyle(cpuLine)
+                        if cpu.count == 1 { PointMark(x:.value("Time",point.time),y:.value("°C",value)).foregroundStyle(Color.indigo).symbolSize(18) }
+                    }
+                }.chartXScale(domain:domain).chartYScale(domain:0...max(1,peak*1.15))
+                    .chartYAxis { AxisMarks(values:.automatic(desiredCount:3)) }
+                    .chartXAxis { AxisMarks(values:.automatic(desiredCount:4)) { _ in AxisValueLabel(format:.dateTime.minute().second()); AxisGridLine() } }
+                    .frame(height:84).accessibilityElement(children:.ignore)
+                    .accessibilityLabel("GPU and CPU die temperature during the selected window, hottest sensor per group")
+                    .accessibilityValue(gpu.isEmpty && cpu.isEmpty ? "No samples" : "GPU \(gpu.last.map { String(format:"%.0f degrees Celsius",$0.value) } ?? "unavailable"), CPU \(cpu.last.map { String(format:"%.0f degrees Celsius",$0.value) } ?? "unavailable")")
+            }
+        }
+    }
+}
+
 struct PerformancePanel:View {
     @ObservedObject var store:ServerStore
     @State private var seconds = 180
@@ -90,6 +141,8 @@ struct PerformancePanel:View {
                     MetricTimeline(title:"Prefill",unit:"tok/s",points:TimelineValue.points(prefill,value:{$0.tokensPerSecond},maximumGap:gap),domain:domain,color:.teal,maximumGap:store.refreshInterval*2.5,emptyMessage:store.gauges["prefill_tokens_live"] == nil ? "Live prefill is unavailable from this server." : "Collecting prefill samples…",status:store.metricsTemporarilyUnavailable ? "Temporarily unavailable" : store.gauges["prefill_tokens_live"] == nil ? "Unavailable" : store.prefillHistory.currentRate == nil ? "Waiting for sample" : nil)
                     Divider()
                     MetricTimeline(title:"GPU allocation",unit:"GiB",points:TimelineValue.points(samples,value:{$0.memoryGiB},maximumGap:gap),domain:domain,color:.indigo,maximumGap:store.refreshInterval*2.5,emptyMessage:(store.props["memory"] as? [String:Any])?["active_bytes"] == nil ? "GPU allocation is not reported by this server." : "Collecting GPU samples…",status:store.metricsTemporarilyUnavailable ? "Temporarily unavailable" : (store.props["memory"] as? [String:Any])?["active_bytes"] == nil ? "Unavailable" : store.history.currentRate == nil ? "Waiting for sample" : nil)
+                    Divider()
+                    TemperatureTimeline(samples:store.temperatureHistory.samples,domain:domain,maximumGap:store.refreshInterval*2.5,unavailable:store.system.gpuTempC == nil && store.system.cpuTempC == nil)
                     Text("Sampled every \(Int(store.refreshInterval))s · prefill excludes cache restores · hover or click to inspect").font(.caption2).foregroundStyle(.secondary)
                 }
             }
@@ -150,6 +203,7 @@ struct SystemStatusPanel:View {
         return formatter.string(from:system.uptime) ?? "Less than a minute"
     }
     func memory(_ value:Double?) -> String { value.map { String(format:"%.1f GiB",$0/1073741824) } ?? "—" }
+    func dieTemperature(_ value:Double?) -> String { value.map { String(format:"Hottest die sensor %.0f °C",$0) } ?? "Die temperature unavailable" }
     var body:some View {
         SushiCard {
             VStack(alignment:.leading,spacing:18) {
@@ -162,10 +216,12 @@ struct SystemStatusPanel:View {
                     VStack(alignment:.leading,spacing:12) {
                         StatValue(title:"CPU",value:system.cpuUsagePercent.map { String(format:"%.0f%%",$0) } ?? "—",note:"\(ProcessInfo.processInfo.activeProcessorCount) cores · system-wide")
                         ProgressView(value:system.cpuUsagePercent ?? 0,total:100).tint((system.cpuUsagePercent ?? 0) > 90 ? .orange : .sushiAccent).opacity(system.cpuUsagePercent == nil ? 0 : 1).accessibilityLabel("System CPU utilization").accessibilityHidden(system.cpuUsagePercent == nil)
+                        Text(dieTemperature(system.cpuTempC)).font(.caption2).foregroundStyle(.secondary)
                     }.frame(maxWidth:.infinity,alignment:.leading)
                     VStack(alignment:.leading,spacing:12) {
                         StatValue(title:"GPU",value:system.gpuUsagePercent.map { String(format:"%.0f%%",$0) } ?? "—",note:system.gpuCoreCount.map { "\($0) cores · system-wide" } ?? "System-wide utilization")
                         ProgressView(value:system.gpuUsagePercent ?? 0,total:100).tint(.teal).opacity(system.gpuUsagePercent == nil ? 0 : 1).accessibilityLabel("System GPU utilization").accessibilityHidden(system.gpuUsagePercent == nil)
+                        Text(dieTemperature(system.gpuTempC)).font(.caption2).foregroundStyle(.secondary)
                     }.frame(maxWidth:.infinity,alignment:.leading)
                 }
                 Divider()

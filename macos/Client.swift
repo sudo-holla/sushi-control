@@ -191,12 +191,17 @@ struct ThroughputSample: Identifiable {
     var memoryGiB:Double?
     var startsNewSegment = false
 }
+protocol TimelineSample {
+    var time:Date { get }
+    var startsNewSegment:Bool { get }
+}
+extension ThroughputSample:TimelineSample {}
 struct TimelineValue:Identifiable {
     var id:Date { time }
     var time:Date
     var value:Double
     var segment:Int
-    static func points(_ samples:[ThroughputSample],value:(ThroughputSample)->Double?,maximumGap:TimeInterval)->[TimelineValue] {
+    static func points<Samples:TimelineSample>(_ samples:[Samples],value:(Samples)->Double?,maximumGap:TimeInterval)->[TimelineValue] {
         var result:[TimelineValue] = []
         var last:Date?
         var segment = 0
@@ -259,6 +264,37 @@ struct PrefillHistory {
         samples.append(ThroughputSample(time:time,tokensPerSecond:rate,memoryGiB:nil,startsNewSegment:startsNewSegment))
         startsNewSegment = false
         samples.removeAll { $0.time < time.addingTimeInterval(-180) }
+        if samples.count > 120 { samples.removeFirst(samples.count-120) }
+    }
+}
+
+struct TemperatureSample:Identifiable {
+    var id:Date { time }
+    var time:Date
+    var gpuC:Double?
+    var cpuC:Double?
+    var startsNewSegment = false
+}
+extension TemperatureSample:TimelineSample {}
+/// Die temperatures are absolute readings, so samples are stored as-is (no counter
+/// delta); gaps longer than `maximumInterval` start a new line segment, and a sample
+/// with no readable sensor is skipped rather than drawn as a drop to zero.
+struct TemperatureHistory {
+    static let retention:TimeInterval = 180
+    static let maximumInterval:TimeInterval = ThroughputHistory.maximumInterval
+    private var lastSampled:Date?
+    var samples:[TemperatureSample] = []
+    var currentGpuC:Double? { samples.last?.gpuC }
+    var currentCpuC:Double? { samples.last?.cpuC }
+    var hasSamples:Bool { !samples.isEmpty }
+    mutating func reset() { lastSampled = nil; samples = [] }
+    mutating func record(time:Date,gpuC:Double?,cpuC:Double?) {
+        guard gpuC != nil || cpuC != nil else { return }
+        guard time > (lastSampled ?? .distantPast) else { return }
+        let startsNewSegment = lastSampled.map { time.timeIntervalSince($0) > Self.maximumInterval } ?? true
+        samples.append(TemperatureSample(time:time,gpuC:gpuC,cpuC:cpuC,startsNewSegment:startsNewSegment))
+        lastSampled = time
+        samples.removeAll { $0.time < time.addingTimeInterval(-Self.retention) }
         if samples.count > 120 { samples.removeFirst(samples.count-120) }
     }
 }
