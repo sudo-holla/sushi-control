@@ -182,6 +182,22 @@ import Foundation
         let words = try JSONDecoder().decode([String].self,from:captured.fileHandleForReading.readDataToEndOfFile())
         precondition(shell.terminationStatus == 0 && words == ["launch","pi","--url","http://127.0.0.1:8000","--model",hostileModel])
         precondition(!FileManager.default.fileExists(atPath:sentinel.path))
+        let windowMetrics:[String:Any] = ["counters":["prompt_tokens_total":10000,"prefill_tokens_total":1000,"prefix_cache_tokens_total":9000,"generation_tokens_total":200,"requests_success_total":4],"histograms":["prefill_time_seconds":["sum":5.0,"count":4],"decode_time_seconds":["sum":10.0,"count":4]]]
+        let baseline = ServingBaseline(metrics:windowMetrics,endpoint:"http://127.0.0.1:8000",time:Date(timeIntervalSince1970:1_800_000_000))
+        precondition(baseline != nil && ServingBaseline(metrics:[:],endpoint:"http://127.0.0.1:8000") == nil && ServingBaseline(metrics:["counters":["prompt_tokens_total":true]],endpoint:"http://127.0.0.1:8000") == nil)
+        precondition(ServingStats(baseline!.window(of:windowMetrics)!).outputTokens == 0)
+        let later:[String:Any] = ["counters":["prompt_tokens_total":12000,"prefill_tokens_total":1500,"prefix_cache_tokens_total":10500,"generation_tokens_total":320,"requests_success_total":6,"requests_failed_total":1],"histograms":["prefill_time_seconds":["sum":7.0,"count":6],"decode_time_seconds":["sum":13.0,"count":6]]]
+        let windowed = ServingStats(baseline!.window(of:later)!)
+        precondition(windowed.promptTokens == 2000 && windowed.outputTokens == 120 && windowed.cachedTokens == 1500 && windowed.forwardedTokens == 500)
+        precondition(windowed.successfulRequests == 2 && windowed.failedRequests == 1 && windowed.prefillRate == 250 && windowed.decodeRate == 40)
+        precondition(windowed.cachedFraction == 0.75)
+        precondition(baseline!.window(of:["counters":["prompt_tokens_total":1]]) == nil)
+        precondition(baseline!.window(of:["counters":["prompt_tokens_total":10000,"generation_tokens_total":200],"histograms":["decode_time_seconds":["sum":9.0,"count":4]]]) == nil)
+        let gaugeOnly:[String:Any] = ["counters":["prompt_tokens_total":10000],"gauges":["requests_running":2]]
+        precondition(ServingBaseline(metrics:gaugeOnly,endpoint:"http://127.0.0.1:8000")!.window(of:gaugeOnly)!["gauges"] == nil)
+        if let data = baseline!.encoded(), let saved = ServingBaseline.decoded(data) {
+            precondition(saved == baseline! && saved.endpoint == "http://127.0.0.1:8000")
+        } else { precondition(false) }
         print("Client behavior tests passed")
     }
 }

@@ -81,7 +81,7 @@ private struct UsageArchive:Codable { var version = 1; let buckets:[UsageBucket]
         buckets = Array(buckets.sorted { $0.hour < $1.hour }.suffix(8192))
         save()
     }
-    func rows(endpoint:String,since:Date)->[UsageBucket] { buckets.filter { $0.endpoint == endpoint && $0.hour >= since }.sorted { $0.hour < $1.hour } }
+    func rows(endpoint:String,since:Date,through:Date = Date())->[UsageBucket] { buckets.filter { $0.endpoint == endpoint && $0.hour >= since && $0.hour <= through }.sorted { $0.hour < $1.hour } }
     func export(endpoint:String) throws -> Data {
         try encoded(buckets.filter { $0.endpoint == endpoint })
     }

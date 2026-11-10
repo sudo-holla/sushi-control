@@ -22,6 +22,20 @@ import Darwin
         let reopenedSidebar = ServerStore(defaults:startupDefaults,automaticallyRefresh:false,service:startupService)
         precondition(!reopenedSidebar.sidebarVisible)
         startupStore.sidebarVisible = true
+        startupStore.metrics = ["counters":["prompt_tokens_total":5000,"generation_tokens_total":400,"requests_success_total":3],"histograms":["decode_time_seconds":["sum":20,"count":4]]]
+        precondition(ServingStats(startupStore.servingMetrics).outputTokens == 400 && startupStore.servingStatsResetTime == nil)
+        startupStore.resetServingStats()
+        precondition(startupStore.error.isEmpty && startupStore.servingStatsResetTime != nil && ServingStats(startupStore.servingMetrics).outputTokens == 0)
+        startupStore.metrics = ["counters":["prompt_tokens_total":5500,"generation_tokens_total":460,"requests_success_total":4],"histograms":["decode_time_seconds":["sum":23,"count":6]]]
+        precondition(ServingStats(startupStore.servingMetrics).outputTokens == 60 && ServingStats(startupStore.servingMetrics).decodeRate == 20)
+        let reopenedStats = ServerStore(defaults:startupDefaults,automaticallyRefresh:false,service:startupService)
+        reopenedStats.metrics = ["counters":["prompt_tokens_total":6000,"generation_tokens_total":520,"requests_success_total":5]]
+        precondition(ServingStats(reopenedStats.servingMetrics).outputTokens == 120 && ServingStats(reopenedStats.servingMetrics).decodeRate == nil)
+        startupStore.showServingStatsTotals()
+        precondition(startupStore.servingStatsResetTime == nil && ServingStats(startupStore.servingMetrics).outputTokens == 460)
+        startupStore.resetServingStats(); startupStore.metrics = ["counters":["prompt_tokens_total":100,"generation_tokens_total":10]]
+        precondition(startupStore.servingStatsResetTime == nil && ServingStats(startupStore.servingMetrics).outputTokens == 10)
+        startupStore.metrics = [:]
         startupStore.endpoint = "http://127.0.0.1:1"; startupStore.binary = "/bin/sleep"
         startupStore.arguments = "[\"serve\",\"--port\",\"1\"]"
         startupStore.startServerAtLogin = true; startupStore.recoverServerAfterCrash = true

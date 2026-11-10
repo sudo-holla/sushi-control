@@ -43,7 +43,10 @@ import AppKit
     @Published var selected = ""
     @Published var rescanAvailable = true
     @Published var props:[String:Any] = [:]
-    @Published var metrics:[String:Any] = [:]
+    @Published var metrics:[String:Any] = [:] { didSet { retireStaleServingBaseline() } }
+    /// Snapshot taken by “Reset” in Serving statistics. Stock Sushi has no endpoint that
+    /// zeroes its counters, so the panel shows the window between this snapshot and now.
+    @Published private(set) var servingBaseline:ServingBaseline?
     @Published var metricsTemporarilyUnavailable = false
     @Published var online = false
     @Published var backendSleeping = false
@@ -214,6 +217,14 @@ import AppKit
         let total = counters["prompt_tokens_total"] as? Double ?? 0
         return total > 0 ? String(format:"%.0f%%",(counters["prefix_cache_tokens_total"] as? Double ?? 0)/total*100) : "—"
     }
+    /// Metrics for the Serving statistics panel and its export: the server's metrics after
+    /// the reset snapshot, or the raw metrics while no snapshot applies.
+    var servingMetrics:[String:Any] {
+        guard let baseline = servingBaseline, baseline.endpoint == connectedEndpoint, let window = baseline.window(of:metrics) else { return metrics }
+        return window
+    }
+    var servingStatsResetTime:Date? { servingBaseline?.time }
+    func servingStatsTime(_ time:Date) -> String { time.formatted(date:.abbreviated,time:.shortened) }
     var logURL:URL { logStream == "error" ? service.errorLogURL : service.logURL }
     init(defaults:UserDefaults = .standard,automaticallyRefresh:Bool = true,service:ManagedServer = ManagedServer(),benchmark:BenchmarkRunner? = nil,tool:ToolTask? = nil,usage:UsageHistory? = nil) {
         self.defaults = defaults; self.service = service; self.tool = tool ?? ToolTask(); self.benchmark = benchmark ?? BenchmarkRunner(); self.usage = usage ?? UsageHistory()
@@ -248,6 +259,7 @@ import AppKit
             apiKey = profile.rememberKey ? CredentialStore().read(profile.id) ?? "" : ""
             connection = Connection(endpoint:endpoint,apiKey:apiKey)
         }
+        if let data = defaults.data(forKey:"servingStatsBaseline"), let saved = ServingBaseline.decoded(data), saved.endpoint == connectedEndpoint { servingBaseline = saved }
         restoreController()
         let configured = defaults.object(forKey:"serverEndpoint") != nil || !profiles.isEmpty || !binary.isEmpty || usesExistingAgent
         setupPresented = !defaults.bool(forKey:"setupCompleted") && !configured
@@ -552,8 +564,25 @@ import AppKit
             diagnosticText = client.apiKey.isEmpty ? report : report.replacingOccurrences(of:client.apiKey,with:"[redacted]"); testingConnection = false
         }
     }
+    func resetServingStats() {
+        guard ServingStats(metrics).available, let baseline = ServingBaseline(metrics:metrics,endpoint:connectedEndpoint), let data = baseline.encoded() else {
+            error = "Serving statistics are unavailable, so there is nothing to reset."; return
+        }
+        servingBaseline = baseline; defaults.set(data,forKey:"servingStatsBaseline")
+        notice = "Serving statistics reset. Showing activity since "+servingStatsTime(baseline.time)+"."
+    }
+    func showServingStatsTotals() {
+        servingBaseline = nil; defaults.removeObject(forKey:"servingStatsBaseline")
+        notice = "Showing lifetime server totals."
+    }
+    /// A server run always starts at zero, so counters below the snapshot mean the
+    /// baseline belongs to a finished run and the lifetime totals are the honest view.
+    private func retireStaleServingBaseline() {
+        guard let baseline = servingBaseline, baseline.endpoint == connectedEndpoint, baseline.window(of:metrics) == nil else { return }
+        servingBaseline = nil; defaults.removeObject(forKey:"servingStatsBaseline")
+    }
     func exportServingStats() {
-        let stats = ServingStats(metrics)
+        let stats = ServingStats(servingMetrics)
         guard stats.available else { return }
         let panel = NSSavePanel(); panel.nameFieldStringValue = "Sushi Serving Stats.csv"
         if panel.runModal() == .OK, let url = panel.url {

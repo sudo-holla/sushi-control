@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-No changes since 0.1.0.
+### Added
+
+- Serving statistics can be reset from the dashboard. `Reset stats` starts an app-local window covering totals, request outcomes, cache efficiency, completed-request speeds, mean time to first token and the two trend charts; the snapshot survives app restarts and `Show server totals` returns to the lifetime view. Standard Sushi exposes no statistics-reset endpoint, so the reset is local to the app: when the server restarts and counters move backwards, the stale window is retired and lifetime totals are shown again.
+- Saved usage accepts a custom start/end date range in addition to Today, 7 days and 30 days. The date pickers are clamped to the 30 days retained locally, and the panel labels the range that was actually queried.
 
 ## 0.1.0 — 2026-11-05
 

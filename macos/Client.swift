@@ -340,6 +340,56 @@ struct ServingStats {
     }
 }
 
+/// A snapshot of a server's metrics, kept so the app can show only the activity that
+/// happened afterwards. Stock Sushi exposes no way to zero its counters, so a reset is
+/// a local window: displayed values are the current metrics minus this snapshot.
+struct ServingBaseline: Codable, Equatable {
+    struct Histogram: Codable, Equatable { var sum:Double; var count:Double }
+    let endpoint:String
+    let time:Date
+    let counters:[String:Double]
+    let histograms:[String:Histogram]
+    init?(metrics:[String:Any],endpoint:String,time:Date = Date()) {
+        guard let rawCounters = metrics["counters"] as? [String:Any] else { return nil }
+        var counters:[String:Double] = [:]
+        for (key,value) in rawCounters { if let number = ServingStats.number(value) { counters[key] = number } }
+        guard !counters.isEmpty else { return nil }
+        var histograms:[String:Histogram] = [:]
+        for (key,value) in metrics["histograms"] as? [String:Any] ?? [:] {
+            guard let fields = value as? [String:Any], let sum = ServingStats.number(fields["sum"]), let count = ServingStats.number(fields["count"]) else { continue }
+            histograms[key] = Histogram(sum:sum,count:count)
+        }
+        self.endpoint = endpoint; self.time = time; self.counters = counters; self.histograms = histograms
+    }
+    func encoded() -> Data? {
+        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+        return try? encoder.encode(self)
+    }
+    static func decoded(_ data:Data) -> ServingBaseline? {
+        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        return try? decoder.decode(ServingBaseline.self,from:data)
+    }
+    /// Metrics reduced to the activity recorded after this baseline, in the shape
+    /// `ServingStats` reads. Returns nil when a counter or histogram sum fell below the
+    /// baseline, which means the server restarted and this snapshot no longer applies.
+    func window(of metrics:[String:Any]) -> [String:Any]? {
+        var nextCounters:[String:Any] = [:]
+        for (key,value) in metrics["counters"] as? [String:Any] ?? [:] {
+            guard let number = ServingStats.number(value) else { nextCounters[key] = value; continue }
+            guard let start = counters[key] else { nextCounters[key] = number; continue }
+            guard number >= start else { return nil }
+            nextCounters[key] = number-start
+        }
+        var nextHistograms:[String:Any] = [:]
+        for (key,value) in metrics["histograms"] as? [String:Any] ?? [:] {
+            guard let fields = value as? [String:Any], let sum = ServingStats.number(fields["sum"]), let count = ServingStats.number(fields["count"]), let start = histograms[key] else { nextHistograms[key] = value; continue }
+            guard sum >= start.sum, count >= start.count else { return nil }
+            nextHistograms[key] = ["sum":sum-start.sum,"count":count-start.count]
+        }
+        return ["counters":nextCounters,"histograms":nextHistograms]
+    }
+}
+
 enum LaunchClient:String,CaseIterable,Identifiable {
     case pi, hermes, claude, opencode, codex, omp, aider, zcode, grok
     var id:String { rawValue }

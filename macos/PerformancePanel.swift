@@ -190,7 +190,12 @@ struct SystemStatusPanel:View {
 }
 struct ServingStatsPanel:View {
     @ObservedObject var store:ServerStore
-    var stats:ServingStats { ServingStats(store.metrics) }
+    var stats:ServingStats { ServingStats(store.servingMetrics) }
+    var windowNote:String {
+        let base = "Current server run. Speed averages exclude cancelled and failed requests; prompt processing counts only tokens forwarded through the model."
+        guard let reset = store.servingStatsResetTime else { return base }
+        return "Showing activity since "+store.servingStatsTime(reset)+". Sushi keeps lifetime counters and exposes no reset endpoint, so this panel subtracts the snapshot taken at reset; the server’s own totals are unchanged. Speed averages exclude cancelled and failed requests; prompt processing counts only tokens forwarded through the model."
+    }
     func count(_ value:Double?) -> String { value.map { $0.formatted(.number.precision(.fractionLength(0))) } ?? "—" }
     func rate(_ value:Double?) -> String { value.map { String(format:"%.1f tok/s",$0) } ?? "—" }
     var body:some View {
@@ -199,6 +204,10 @@ struct ServingStatsPanel:View {
                 HStack {
                     Label("Serving statistics",systemImage:"chart.bar.xaxis").font(.headline)
                     Spacer()
+                    if store.servingStatsResetTime != nil {
+                        Button("Show server totals",systemImage:"circle.badge.checkmark") { store.showServingStatsTotals() }
+                    }
+                    Button("Reset",systemImage:"arrow.counterclockwise") { store.resetServingStats() }.disabled(!stats.available).accessibilityLabel("Reset serving statistics")
                     Button("Export CSV…",systemImage:"square.and.arrow.up") { store.exportServingStats() }.disabled(!stats.available)
                 }
                 if !stats.available {
@@ -227,7 +236,7 @@ struct ServingStatsPanel:View {
                         Spacer()
                         if let hits = stats.cacheHitFraction { Text(String(format:"%.0f%% prefix lookup hit rate",hits*100)) }
                     }.font(.caption).foregroundStyle(.secondary)
-                    Text("Current server run. Speed averages exclude cancelled and failed requests; prompt processing counts only tokens forwarded through the model.").font(.caption2).foregroundStyle(.secondary)
+                    Text(windowNote).font(.caption2).foregroundStyle(.secondary)
                 }
             }.padding(12)
         }

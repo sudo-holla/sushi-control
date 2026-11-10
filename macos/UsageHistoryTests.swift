@@ -43,6 +43,18 @@ import Foundation
         malformed.record(endpoint:"http://127.0.0.1:8000",metrics:metrics(2),at:start.addingTimeInterval(3))
         let preserved = try Data(contentsOf:url)
         precondition(preserved == Data("invalid".utf8))
-        print("Usage history passed: sample deltas, reset/gap isolation, endpoint separation, retention, persistence, export, corruption refusal")
+        let ranged = UsageHistory(storageURL:root.appendingPathComponent("range.json"))
+        let rangeBase = Date(timeIntervalSince1970:1_759_996_800)
+        func pair(_ tokens:Double,_ offset:TimeInterval) { ranged.record(endpoint:"http://127.0.0.1:8000",metrics:metrics(tokens),at:rangeBase.addingTimeInterval(offset)) }
+        pair(100,0); pair(110,3)
+        pair(200,3_600); pair(210,3_603)
+        pair(300,7_200); pair(310,7_203)
+        precondition(ranged.rows(endpoint:"http://127.0.0.1:8000",since:rangeBase).count == 3)
+        precondition(ranged.rows(endpoint:"http://127.0.0.1:8000",since:rangeBase,through:rangeBase).map(\.hour) == [rangeBase])
+        let pairOfRows = ranged.rows(endpoint:"http://127.0.0.1:8000",since:rangeBase,through:rangeBase.addingTimeInterval(3_600))
+        precondition(pairOfRows.map(\.hour) == [rangeBase,rangeBase.addingTimeInterval(3_600)])
+        precondition(ranged.rows(endpoint:"http://127.0.0.1:8000",since:rangeBase.addingTimeInterval(3_600),through:rangeBase.addingTimeInterval(7_200)).count == 2)
+        precondition(ranged.rows(endpoint:"http://127.0.0.1:9000",since:rangeBase,through:rangeBase.addingTimeInterval(7_200)).isEmpty)
+        print("Usage history passed: sample deltas, reset/gap isolation, endpoint separation, retention, persistence, export, corruption refusal, date range filtering")
     }
 }
